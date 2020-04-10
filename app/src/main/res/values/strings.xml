@@ -1,0 +1,19 @@
+<resources>
+    <string name="app_name">GoDutch</string>
+
+    <string-array name="cities_array">
+        <item>İzmir</item>
+        <item>İstanbul</item>
+        <item>Ankara</item>
+    </string-array>
+
+    <string name="search_restaurant">Restorant ara</string>
+    <string name="restaurants">Restorantlar</string>
+    <string name="title_activity_table">TableActivity</string>
+    <string name="title_menu">Menu</string>
+    <string name="title_table">Masa</string>
+    <string name="title_myorders">Siparişlerim</string>
+
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+</resources>
