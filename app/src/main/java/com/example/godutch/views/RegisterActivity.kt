@@ -79,10 +79,14 @@ class RegisterActivity : AppCompatActivity() {
                                 val preferences = getSharedPreferences("APP_PREFERENCES", Context.MODE_PRIVATE)
                                 val editor = preferences.edit()
                                 editor.putString("token", result!!.tokenType+" "+ result!!.accessToken)
+                                editor.putString("userId", result!!.id)
+                                editor.putString("username", result!!.username)
+                                editor.putString("email", result!!.email)
                                 editor.apply()
 
                                 val intent = Intent(activity, RestaurantsActivity::class.java)
                                 startActivity(intent)
+                                finish()
                             } catch (e: Exception) {
                                 e.printStackTrace()
                             }

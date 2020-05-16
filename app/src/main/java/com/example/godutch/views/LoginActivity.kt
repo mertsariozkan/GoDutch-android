@@ -29,9 +29,15 @@ class LoginActivity : Activity() {
 
         val preferences = getSharedPreferences("APP_PREFERENCES", Context.MODE_PRIVATE)
         val token = preferences.getString("token", null)
+        val restaurantId = preferences.getString("restaurantId", null)
         if (token != null) {
-            val intent = Intent(this, RestaurantsActivity::class.java)
-            startActivity(intent)
+            if(restaurantId == null) {
+                val intent = Intent(this, RestaurantsActivity::class.java)
+                startActivity(intent)
+            } else {
+                val intent = Intent(this, TableListActivity::class.java)
+                startActivity(intent)
+            }
             finish()
         }
 
@@ -68,13 +74,26 @@ class LoginActivity : Activity() {
                                     json["accessToken"] as String,
                                     json["tokenType"] as String
                                 )
-                                val preferences = activity.getSharedPreferences("APP_PREFERENCES", Context.MODE_PRIVATE)
                                 val editor = preferences.edit()
                                 editor.putString("token", result!!.tokenType+" "+ result!!.accessToken)
+                                editor.putString("userId", result!!.id)
+                                editor.putString("username", result!!.username)
+                                editor.putString("email", result!!.email)
+
+                                if(result!!.roles[0] == "ROLE_WAITER")
+                                    editor.putString("restaurantId", json["restaurantId"] as String)
+
                                 editor.apply()
 
-                                val intent = Intent(activity, RestaurantsActivity::class.java)
-                                startActivity(intent)
+                                if(result!!.roles[0] == "ROLE_USER") {
+                                    val intent = Intent(activity, RestaurantsActivity::class.java)
+                                    startActivity(intent)
+                                }
+                                else if(result!!.roles[0] == "ROLE_WAITER") {
+                                    val intent = Intent(activity, TableListActivity::class.java)
+                                    startActivity(intent)
+                                }
+                                finish()
                             } catch (e: JSONException) {
                                 e.printStackTrace()
                             }

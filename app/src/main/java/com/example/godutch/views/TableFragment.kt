@@ -14,12 +14,10 @@ import androidx.fragment.app.FragmentActivity
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.example.godutch.R
 import com.example.godutch.models.MenuItem
-import com.example.godutch.models.Restaurant
-import com.example.godutch.utils.AppCommons
-import com.example.godutch.utils.MenuListAdapter
-import com.example.godutch.utils.OkHttpRequest
-import com.example.godutch.utils.RestaurantsListAdapter
-import kotlinx.android.synthetic.main.fragment_menu.view.*
+import com.example.godutch.models.Order
+import com.example.godutch.models.TableUser
+import com.example.godutch.utils.*
+import kotlinx.android.synthetic.main.fragment_table.view.*
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.OkHttpClient
@@ -28,9 +26,9 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
 
-class MenuFragment : Fragment() {
+class TableFragment : Fragment() {
 
-    var menuListView : ListView? = null
+    var ordersListView : ListView? = null
     var swipeToRefresh : SwipeRefreshLayout? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -40,7 +38,7 @@ class MenuFragment : Fragment() {
         val request = OkHttpRequest(client)
 
 
-        var adapter: MenuListAdapter?
+        var adapter: TableOrdersListAdapter?
 
         val args = arguments
         val restaurantId = args!!.getString("restaurantId")
@@ -48,7 +46,7 @@ class MenuFragment : Fragment() {
         val tableName = args!!.getString("tableName")
         val token = args!!.getString("token")
 
-        var url = AppCommons.RootUrl + "menu/" + restaurantId
+        var url = AppCommons.RootUrl + "table/" + restaurantId + "/" + tableName
 
         request.GET(url, token, object: Callback {
             override fun onResponse(call: Call?, response: Response) {
@@ -57,22 +55,26 @@ class MenuFragment : Fragment() {
                     try {
                         val json = JSONObject(responseData)
                         println("Request Successful!!")
+                        val users : JSONArray = json["users"] as JSONArray
 
-                        val menuCategories = json["menuCategories"] as JSONArray
+                        adapter = TableOrdersListAdapter(activity, restaurantId, tableName)
 
-                        adapter = MenuListAdapter(activity, restaurantId, tableName)
+                        for (i in 0 until users.length()) {
+                            val user = users.getJSONObject(i)
+                            adapter!!.addTableUser(TableUser(user["id"] as String, user["username"] as String, user["orders"] as JSONArray, user["paid"] as Boolean))
 
-                        for (i in 0 until menuCategories.length()) {
-                            val category = menuCategories.getJSONObject(i)
-                            val items = category["items"] as JSONArray
-                            adapter!!.addSectionHeaderItem(MenuItem(category["categoryName"] as String, 0.0))
-                            for(j in 0 until items.length()) {
-                                val item = items.getJSONObject(j)
-                                adapter!!.addItem(MenuItem(item["name"] as String, item["price"] as Double))
+                            val orders : JSONArray = user["orders"] as JSONArray
+
+                            for (j in 0 until orders.length()) {
+                                val order = orders.getJSONObject(j)
+                                val item = order["item"] as JSONObject
+                                adapter!!.addItem(Order(MenuItem(item["name"] as String, item["price"] as Double), order["count"] as Int))
                             }
+
+                            ordersListView!!.adapter = adapter
+
                         }
 
-                        menuListView!!.adapter = adapter
                     } catch (e: Exception) {
                         e.printStackTrace()
                     }
@@ -80,21 +82,18 @@ class MenuFragment : Fragment() {
             }
 
             override fun onFailure(call: Call?, e: IOException?) {
-                println("Can not get tables.")
+                println("Can not get table orders.")
             }
         })
-
-
-
     }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        val view = inflater.inflate(R.layout.fragment_menu, container, false)
-        menuListView = view.menuListView
-        swipeToRefresh = view.swipeToRefreshMenu
+        val view = inflater.inflate(R.layout.fragment_table, container, false)
+        ordersListView = view.orderListView
+        swipeToRefresh = view.swipeToRefreshOrders
         swipeToRefresh!!.setProgressBackgroundColorSchemeColor(ContextCompat.getColor(activity!!.applicationContext, R.color.colorPrimary))
         swipeToRefresh!!.setColorSchemeColors(Color.WHITE)
         swipeToRefresh!!.setOnRefreshListener {

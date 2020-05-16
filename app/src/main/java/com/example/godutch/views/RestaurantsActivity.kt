@@ -10,15 +10,16 @@ import android.view.MenuItem
 import android.widget.*
 import androidx.appcompat.app.ActionBar
 import androidx.appcompat.app.AppCompatActivity
+import com.example.godutch.Payload.Requests.JoinTableRequest
 import com.example.godutch.Payload.Responses.GetAllTablesResponse
 import com.example.godutch.Payload.Responses.GetRestaurantsResponse
 import com.example.godutch.R
 import com.example.godutch.models.Restaurant
 import com.example.godutch.models.RestaurantTable
+import com.example.godutch.models.UserConfigDto
 import com.example.godutch.utils.AppCommons
 import com.example.godutch.utils.OkHttpRequest
 import com.example.godutch.utils.RestaurantsListAdapter
-import kotlinx.android.synthetic.main.activity_table.*
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.OkHttpClient
@@ -40,10 +41,13 @@ class RestaurantsActivity : AppCompatActivity() {
 
         val preferences = getSharedPreferences("APP_PREFERENCES", Context.MODE_PRIVATE)
         val token = preferences.getString("token", "")
+        val userId = preferences.getString("userId", "")
+        val username = preferences.getString("username", "")
 
         supportActionBar?.displayOptions = ActionBar.DISPLAY_SHOW_CUSTOM
         supportActionBar?.setCustomView(R.layout.appbar_godutch)
 
+        val restaurantSearchField = findViewById<SearchView>(R.id.restaurantSearchField)
         val restaurantsListView = findViewById<ListView>(R.id.restaurantsListView)
         var adapter : RestaurantsListAdapter? = null
         val restaurantList = ArrayList<Restaurant>()
@@ -65,7 +69,8 @@ class RestaurantsActivity : AppCompatActivity() {
                             restaurantList.add(Restaurant(restaurant["id"] as String, restaurant["name"] as String, restaurant["latitude"] as Double, restaurant["longitude"] as Double))
                         }
 
-                        adapter = RestaurantsListAdapter(activity, android.R.layout.simple_list_item_1, restaurantList)
+                        val sortedList = restaurantList.sortedWith(compareBy { it.name })
+                        adapter = RestaurantsListAdapter(activity, android.R.layout.simple_list_item_1, sortedList)
                         restaurantsListView.adapter = adapter
                     } catch (e: Exception) {
                         e.printStackTrace()
@@ -94,12 +99,15 @@ class RestaurantsActivity : AppCompatActivity() {
                             var result = GetAllTablesResponse(
                                 json["restaurantTableDtos"] as JSONArray
                             )
-
+                            var tableList = ArrayList<JSONObject>()
                             for (i in 0 until result.restaurantTables.length()) {
                                 val table = result.restaurantTables.getJSONObject(i)
-                                popup.menu.add(table["name"] as String)
+                                tableList.add(table)
                             }
-
+                            val sortedList = tableList.sortedWith(compareBy { it["name"] as String })
+                            for (i in 0 until result.restaurantTables.length()) {
+                                popup.menu.add(sortedList[i]["name"] as String)
+                            }
                             popup.show()
 
                         } catch (e: Exception) {
@@ -129,8 +137,8 @@ class RestaurantsActivity : AppCompatActivity() {
                                     json["passCode"] as String,
                                     json["users"] as JSONArray
                                 )
-
-                                showPassCodeDialog(request, token, restaurant, table)
+                                var user = UserConfigDto(token, userId, username)
+                                showPassCodeDialog(request, user, restaurant, table)
 
                             } catch (e: Exception) {
                                 e.printStackTrace()
@@ -147,11 +155,27 @@ class RestaurantsActivity : AppCompatActivity() {
             }
 
         }
+
+        restaurantSearchField.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(query: String?): Boolean {
+                return false
+            }
+
+            override fun onQueryTextChange(newText: String?): Boolean {
+
+                val text = newText
+                /*Call filter Method Created in Custom Adapter
+                    This Method Filter ListView According to Search Keyword
+                 */
+                adapter!!.filter.filter(text)
+                return false
+            }
+        })
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
 
-        menuInflater.inflate(R.menu.appbar_menu, menu)
+        menuInflater.inflate(R.menu.appbar_settings, menu)
         return super.onCreateOptionsMenu(menu)
     }
 
@@ -169,7 +193,7 @@ class RestaurantsActivity : AppCompatActivity() {
         return this
     }
 
-    private fun showPassCodeDialog(request: OkHttpRequest, token: String, restaurant : Restaurant, table : RestaurantTable) {
+    private fun showPassCodeDialog(request: OkHttpRequest, user: UserConfigDto, restaurant : Restaurant, table : RestaurantTable) {
         val builder = AlertDialog.Builder(getContext())
         builder.setTitle(restaurant.name + " - " + table.name)
         if(table.isProtected)
@@ -186,25 +210,60 @@ class RestaurantsActivity : AppCompatActivity() {
         builder.setView(passCodeField)
 
         builder.setPositiveButton(android.R.string.yes) { dialog, which ->
-            var a = passCodeField.text.toString()
+            val a = passCodeField.text.toString()
             if(table.isProtected && passCodeField.text.toString() == table.passCode) {
-                val intent = Intent(getContext(), TableActivity::class.java)
-                startActivity(intent)
-            } else if(!table.isProtected) {
-                var url = AppCommons.RootUrl + "table/" + restaurant.id + "/" + table.name
-                request.POST(url, a, token, object: Callback {
+                val joinTableRequest = JoinTableRequest(user.userId, user.username)
+                val joinTableUrl = AppCommons.RootUrl + "table/" + restaurant.id + "/" + table.name + "/join"
+                request.POST(joinTableUrl, joinTableRequest, user.token, object: Callback {
                     override fun onResponse(call: Call?, response: Response) {
                         val responseData = response.body()?.string()
                         runOnUiThread {
                             try {
-                                val json = JSONObject(responseData)
-                                println("Request Successful!!")
                                 val intent = Intent(getContext(), TableActivity::class.java)
+                                intent.putExtra("restaurantId", restaurant.id)
+                                intent.putExtra("restaurantName", restaurant.name)
+                                intent.putExtra("tableName", table.name)
+                                intent.putExtra("userName", user.username)
                                 startActivity(intent)
+                                finish()
                             } catch (e: Exception) {
                                 e.printStackTrace()
                             }
                         }
+                    }
+
+                    override fun onFailure(call: Call?, e: IOException?) {
+                        println("User can not added.")
+                    }
+                })
+
+            } else if(!table.isProtected) {
+                var url = AppCommons.RootUrl + "table/" + restaurant.id + "/" + table.name
+                request.POST(url, a, user.token, object: Callback {
+                    override fun onResponse(call: Call?, response: Response) {
+                        val joinTableRequest = JoinTableRequest(user.userId, user.username)
+                        val joinTableUrl = AppCommons.RootUrl + "table/" + restaurant.id + "/" + table.name + "/join"
+                        request.POST(joinTableUrl, joinTableRequest, user.token, object: Callback {
+                            override fun onResponse(call: Call?, response: Response) {
+                                runOnUiThread {
+                                    try {
+                                        val intent = Intent(getContext(), TableActivity::class.java)
+                                        intent.putExtra("restaurantId", restaurant.id)
+                                        intent.putExtra("restaurantName", restaurant.name)
+                                        intent.putExtra("tableName", table.name)
+                                        intent.putExtra("userName", user.username)
+                                        startActivity(intent)
+                                        finish()
+                                    } catch (e: Exception) {
+                                        e.printStackTrace()
+                                    }
+                                }
+                            }
+
+                            override fun onFailure(call: Call?, e: IOException?) {
+                                println("User can not added.")
+                            }
+                        })
                     }
 
                     override fun onFailure(call: Call?, e: IOException?) {

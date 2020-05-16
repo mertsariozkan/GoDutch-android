@@ -9,19 +9,18 @@ import android.widget.Filter
 import android.widget.Filterable
 import android.widget.TextView
 import androidx.annotation.LayoutRes
-import com.example.godutch.models.Restaurant
 
-class RestaurantsListAdapter(context: Context, @LayoutRes private val layoutResource: Int, private val restaurants: List<Restaurant>):
-    ArrayAdapter<Restaurant>(context, layoutResource, restaurants), Filterable {
+class TablesListAdapter(context: Context, @LayoutRes private val layoutResource: Int, private val tables: List<String>):
+    ArrayAdapter<String>(context, layoutResource, tables), Filterable {
 
-    private var mRestaurants: List<Restaurant> = restaurants
+    private var mTables: List<String> = tables
 
     override fun getCount(): Int {
-        return mRestaurants.size
+        return mTables.size
     }
 
-    override fun getItem(p0: Int): Restaurant? {
-        return mRestaurants[p0]
+    override fun getItem(p0: Int): String? {
+        return mTables[p0]
     }
 
 
@@ -35,14 +34,14 @@ class RestaurantsListAdapter(context: Context, @LayoutRes private val layoutReso
 
     private fun createViewFromResource(position: Int, convertView: View?, parent: ViewGroup?): View{
         val view: TextView = convertView as TextView? ?: LayoutInflater.from(context).inflate(layoutResource, parent, false) as TextView
-        view.text = mRestaurants[position].name
+        view.text = mTables[position]
         return view
     }
 
     override fun getFilter(): Filter {
         return object : Filter() {
             override fun publishResults(charSequence: CharSequence?, filterResults: FilterResults) {
-                mRestaurants = filterResults.values as List<Restaurant>
+                mTables = filterResults.values as List<String>
                 notifyDataSetChanged()
             }
 
@@ -51,10 +50,10 @@ class RestaurantsListAdapter(context: Context, @LayoutRes private val layoutReso
 
                 val filterResults = FilterResults()
                 filterResults.values = if (queryString==null || queryString.isEmpty())
-                    restaurants
+                    tables
                 else
-                    restaurants.filter {
-                        it.name.toLowerCase().contains(queryString)
+                    tables.filter {
+                        it.toLowerCase().contains(queryString)
                     }
                 return filterResults
             }
