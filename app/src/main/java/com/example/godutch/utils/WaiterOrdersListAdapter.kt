@@ -9,6 +9,7 @@ import android.view.ViewGroup
 import android.widget.BaseAdapter
 import android.widget.ImageButton
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.core.content.ContextCompat.startActivity
 import com.example.godutch.Payload.Requests.AddOrderRequest
 import com.example.godutch.Payload.Requests.DeleteUserRequest
@@ -23,7 +24,7 @@ import java.io.IOException
 import java.util.*
 
 
-class WaiterOrdersListAdapter(context: Context, private val activity: Activity, private val restaurantId: String, private val tableName: String) : BaseAdapter() {
+class WaiterOrdersListAdapter(context: Context, private val activity: Activity, private val restaurantId: String, private val tableName: String, private var paymentInitiated: Boolean = false) : BaseAdapter() {
 
     private val mData = ArrayList<Any>()
     private val tableUserSet = TreeSet<Int>()
@@ -51,6 +52,11 @@ class WaiterOrdersListAdapter(context: Context, private val activity: Activity, 
 
     fun removeAtPosition(position: Int) {
         mData.removeAt(position)
+        notifyDataSetChanged()
+    }
+
+    fun notifyPaymentInitiation() {
+        paymentInitiated = true
         notifyDataSetChanged()
     }
 
@@ -130,6 +136,15 @@ class WaiterOrdersListAdapter(context: Context, private val activity: Activity, 
                         }
                     })
             }
+
+            if(paymentInitiated) {
+                if((mData[position] as TableUser).isPaid) {
+                    holder.name!!.background = ContextCompat.getDrawable(activity, R.drawable.green_underline)
+                } else {
+                    holder.name!!.background = ContextCompat.getDrawable(activity, R.drawable.red_underline)
+                }
+            }
+
         }
 
 

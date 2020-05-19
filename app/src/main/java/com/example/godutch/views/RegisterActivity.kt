@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.view.WindowManager
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import com.example.godutch.Payload.Responses.SignupResponse
@@ -25,6 +26,8 @@ import java.io.IOException
 
 class RegisterActivity : AppCompatActivity() {
 
+    var progressBar : ProgressBar? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_register)
@@ -35,6 +38,7 @@ class RegisterActivity : AppCompatActivity() {
 
         val emailField: EditText = findViewById(R.id.emailField)
         val passwordField: EditText = findViewById(R.id.passwordField)
+        progressBar = findViewById(R.id.register_progressbar)
 
         val cityDropdown: Spinner = findViewById(R.id.cityDropdown)
         ArrayAdapter.createFromResource(
@@ -58,6 +62,7 @@ class RegisterActivity : AppCompatActivity() {
             var passwordRepeat = repeatPasswordField.text.toString()
 
             if(user.email != "" && user.username != "" && user.password != "" && passwordRepeat != "" && user.password == passwordRepeat) {
+                startProgressBar()
                 val url = AppCommons.RootUrl + "auth/signup"
                 var result : SignupResponse? = null
                 request.POST(url, user, object: Callback {
@@ -65,6 +70,7 @@ class RegisterActivity : AppCompatActivity() {
                         val responseData = response.body()?.string()
                         runOnUiThread {
                             try {
+                                stopProgressBar()
                                 val json = JSONObject(responseData)
                                 val id = json["id"]
                                 println("Request Successful!!")
@@ -89,6 +95,10 @@ class RegisterActivity : AppCompatActivity() {
                                 finish()
                             } catch (e: Exception) {
                                 e.printStackTrace()
+                                activity.runOnUiThread {
+                                    stopProgressBar()
+                                    Toast.makeText(applicationContext, "User credentials is not valid.", Toast.LENGTH_LONG).show()
+                                }
                             }
                         }
                     }
@@ -97,11 +107,27 @@ class RegisterActivity : AppCompatActivity() {
                         println("Can not sign up")
                     }
                 })
+            } else if(user.password != passwordRepeat) {
+                Toast.makeText(applicationContext, "Password confirmation is different from password.", Toast.LENGTH_LONG).show()
+            } else {
+                Toast.makeText(applicationContext, "Please fill all input fields to register.", Toast.LENGTH_LONG).show()
             }
 
 
         }
 
+    }
+
+    private fun startProgressBar() {
+        progressBar!!.visibility = ProgressBar.VISIBLE
+        window.setFlags(
+            WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+            WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE)
+    }
+
+    private fun stopProgressBar() {
+        progressBar!!.visibility = ProgressBar.INVISIBLE
+        window.clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE)
     }
 
 }

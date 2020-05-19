@@ -71,8 +71,6 @@ class AddCreditCardActivity : AppCompatActivity() {
                             .setPositiveButton(
                                 android.R.string.ok
                             ) { dialog, whichButton ->
-                                val intent = Intent(this@AddCreditCardActivity, CreditCardListActivity::class.java)
-                                startActivity(intent)
                                 finish()
                             }
                         if(json["success"] as Boolean) {

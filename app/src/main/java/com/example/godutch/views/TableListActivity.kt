@@ -1,24 +1,26 @@
 package com.example.godutch.views
 
 import android.app.Activity
-import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
 import android.os.Bundle
-import android.view.Menu
-import android.view.MenuItem
-import android.widget.*
+import android.view.*
+import android.widget.AdapterView
+import android.widget.ListView
+import android.widget.ProgressBar
+import android.widget.SearchView
 import androidx.appcompat.app.ActionBar
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import com.example.godutch.Payload.Requests.JoinTableRequest
+import androidx.core.content.ContextCompat
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.example.godutch.Payload.Responses.GetAllTablesResponse
 import com.example.godutch.R
-import com.example.godutch.models.Restaurant
-import com.example.godutch.models.RestaurantTable
-import com.example.godutch.models.UserConfigDto
 import com.example.godutch.utils.AppCommons
 import com.example.godutch.utils.OkHttpRequest
 import com.example.godutch.utils.TablesListAdapter
+import kotlinx.android.synthetic.main.activity_table_list.*
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.OkHttpClient
@@ -26,65 +28,60 @@ import okhttp3.Response
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
+import java.util.*
+import kotlin.collections.ArrayList
 
 
 class TableListActivity : AppCompatActivity() {
 
+    var tablesListView: ListView? = null
+
+    val client : OkHttpClient = OkHttpClient()
+    val request : OkHttpRequest = OkHttpRequest(client)
+    var progressBar: ProgressBar? = null
+
+    var activity: Activity? = null
+    var token : String? = null
+    var restaurantId : String? = null
+    var url : String? = null
+    var adapter : TablesListAdapter? = null
+    val adapterLock = Any()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_table_list)
-
-        val activity: Activity = this
-        val client : OkHttpClient = OkHttpClient()
-        val request : OkHttpRequest = OkHttpRequest(client)
-
-        val preferences = getSharedPreferences("APP_PREFERENCES", Context.MODE_PRIVATE)
-        val token = preferences.getString("token", "")
-        val userId = preferences.getString("userId", "")
-        val username = preferences.getString("username", "")
-        var restaurantId = preferences.getString("restaurantId", "")
+        progressBar = findViewById(R.id.tablelist_progressbar)
+        progressBar!!.visibility = ProgressBar.VISIBLE
+        window.setFlags(
+            WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+            WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE)
 
         supportActionBar?.displayOptions = ActionBar.DISPLAY_SHOW_CUSTOM
         supportActionBar?.setCustomView(R.layout.appbar_godutch)
 
+        activity = this
+        val preferences = this.getSharedPreferences("APP_PREFERENCES", Context.MODE_PRIVATE)
+        token = preferences.getString("token", "")
+        val userId = preferences.getString("userId", "")
+        val username = preferences.getString("username", "")
+        restaurantId = preferences.getString("restaurantId", "")
+        url = AppCommons.RootUrl + "table/" + restaurantId + "/allactive"
+
         val tableSearchField = findViewById<SearchView>(R.id.tableSearchField)
-        val tablesListView = findViewById<ListView>(R.id.tablesListView)
-        var adapter : TablesListAdapter? = null
-        val tableList = ArrayList<String>()
-
-        var url = AppCommons.RootUrl + "table/" + restaurantId + "/allactive"
-        request.GET(url, token, object: Callback {
-            override fun onResponse(call: Call?, response: Response) {
-                val responseData = response.body()?.string()
-                runOnUiThread {
-                    try {
-                        val json = JSONObject(responseData)
-                        println("Request Successful!!")
-                        var result = GetAllTablesResponse(
-                            json["restaurantTableDtos"] as JSONArray
-                        )
-
-                        for (i in 0 until result.restaurantTables.length()) {
-                            val table = result.restaurantTables.getJSONObject(i)
-                            tableList.add(table["name"] as String)
-                        }
-
-                        adapter = TablesListAdapter(activity, android.R.layout.simple_list_item_1, tableList)
-                        tablesListView.adapter = adapter
-
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                }
-            }
-
-            override fun onFailure(call: Call?, e: IOException?) {
-                println("Can not get tables.")
-            }
-        })
+        tablesListView = findViewById(R.id.tablesListView)
 
 
-        tablesListView.setOnItemClickListener { parent, view, position, id ->
+        val swipeToRefresh = findViewById<SwipeRefreshLayout>(R.id.swipeToRefreshTables)
+        swipeToRefresh.setProgressBackgroundColorSchemeColor(ContextCompat.getColor(applicationContext, R.color.colorPrimary))
+        swipeToRefresh.setColorSchemeColors(Color.WHITE)
+        swipeToRefresh.setOnRefreshListener {
+            createListviewData()
+            swipeToRefresh!!.isRefreshing = false
+        }
+
+
+        tablesListView!!.setOnItemClickListener { parent, view, position, id ->
+            stopTimer()
             val intent = Intent(this, WaiterTableActivity::class.java)
             intent.putExtra("restaurantId", restaurantId)
             intent.putExtra("tableName", parent.getItemAtPosition(position) as String)
@@ -99,7 +96,9 @@ class TableListActivity : AppCompatActivity() {
             override fun onQueryTextChange(newText: String?): Boolean {
 
                 val text = newText
-                adapter!!.filter.filter(text)
+                synchronized(adapterLock) {
+                    adapter!!.filter.filter(text)
+                }
                 return false
             }
         })
@@ -115,10 +114,118 @@ class TableListActivity : AppCompatActivity() {
         val id = item.itemId
 
         if (id == R.id.settingsButton) {
+            stopTimer()
             val intent = Intent(this, SettingsActivity::class.java)
             startActivity(intent)
         }
         return super.onOptionsItemSelected(item)
+    }
+
+    override fun onCreateContextMenu(menu: ContextMenu, v: View, menuInfo: ContextMenu.ContextMenuInfo?) {
+        if (v.id == R.id.tablesListView) {
+            val lv = v as ListView
+            val acmi = menuInfo as AdapterView.AdapterContextMenuInfo?
+            val table = lv.getItemAtPosition(acmi!!.position) as String
+            menu.add("Reset Table")
+        }
+    }
+
+    override fun onContextItemSelected(item: MenuItem): Boolean {
+        if (item.title == "Reset Table") {
+            AlertDialog.Builder(this)
+                .setTitle("Confirmation")
+                .setMessage("Are you sure you want to reset this table?")
+                .setIcon(android.R.drawable.ic_dialog_alert)
+                .setPositiveButton(android.R.string.yes) { dialog, whichButton ->
+                    var info = item.menuInfo as AdapterView.AdapterContextMenuInfo
+                    val url = AppCommons.RootUrl + "table/" + restaurantId + "/" + tablesListView!!.getItemAtPosition(info.position) + "/reset"
+                    request.POST(url, token!!, object : Callback {
+                        override fun onResponse(call: Call?, response: Response) {
+                            activity!!.runOnUiThread {
+                                adapter!!.removeAtPosition(info.position)
+                            }
+                        }
+
+                        override fun onFailure(call: Call?, e: IOException?) {
+
+                        }
+                    })
+                }.setNegativeButton(android.R.string.no, null).show()
+        }
+        return true
+    }
+
+
+    private fun createListviewData() {
+        request.GET(url!!, token!!, object: Callback {
+            override fun onResponse(call: Call?, response: Response) {
+                val responseData = response.body()?.string()
+                runOnUiThread {
+                    try {
+                        progressBar!!.visibility = ProgressBar.INVISIBLE
+                        window.clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE)
+
+                        val json = JSONObject(responseData)
+                        println("Request Successful!!")
+                        var result = GetAllTablesResponse(
+                            json["restaurantTableDtos"] as JSONArray
+                        )
+
+                        val tableList = ArrayList<String>()
+
+                        for (i in 0 until result.restaurantTables.length()) {
+                            val table = result.restaurantTables.getJSONObject(i)
+                            tableList.add(table["name"] as String)
+                        }
+                        synchronized(adapterLock) {
+                            adapter = TablesListAdapter(activity!!, android.R.layout.simple_list_item_1, tableList)
+                            adapter!!.filter.filter(tableSearchField.query.toString())
+                            tablesListView!!.adapter = adapter
+                            registerForContextMenu(tablesListView)
+                        }
+
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }
+
+            override fun onFailure(call: Call?, e: IOException?) {
+                println("Can not get tables.")
+            }
+        })
+    }
+
+    override fun onPause() {
+        super.onPause()
+        stopTimer()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        startTimer()
+    }
+
+    private fun startTimer() {
+        timer = Timer()
+        timer!!.schedule(object : TimerTask() {
+            override fun run() {
+                createListviewData()
+            }
+        }, 0, 3000)
+    }
+
+    private fun stopTimer() {
+        if(timer
+            != null) {
+            timer!!.cancel()
+            timer!!.purge()
+            timer = null
+        }
+    }
+
+    companion object {
+        var timer : Timer? = null
     }
 
 }

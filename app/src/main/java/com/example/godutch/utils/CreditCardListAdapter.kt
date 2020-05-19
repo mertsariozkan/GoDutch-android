@@ -13,10 +13,10 @@ import com.example.godutch.models.CardData
 
 
 
-class CreditCardListAdapter(context: Context, @LayoutRes private val layoutResource: Int, private val creditCards: List<CardData>):
+class CreditCardListAdapter(context: Context, @LayoutRes private val layoutResource: Int, private val creditCards: ArrayList<CardData>):
     ArrayAdapter<CardData>(context, layoutResource, creditCards), Filterable {
 
-    private var mCreditCards: List<CardData> = creditCards
+    private var mCreditCards: ArrayList<CardData> = creditCards
 
     override fun getCount(): Int {
         return mCreditCards.size
@@ -24,6 +24,11 @@ class CreditCardListAdapter(context: Context, @LayoutRes private val layoutResou
 
     override fun getItem(p0: Int): CardData? {
         return mCreditCards[p0]
+    }
+
+    fun removeAtPosition(position: Int) {
+        mCreditCards.removeAt(position)
+        notifyDataSetChanged()
     }
 
 

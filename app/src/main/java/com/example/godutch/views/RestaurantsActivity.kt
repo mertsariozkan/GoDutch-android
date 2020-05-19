@@ -4,13 +4,18 @@ import android.app.Activity
 import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
+import android.view.WindowManager
 import android.widget.*
 import androidx.appcompat.app.ActionBar
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.example.godutch.Payload.Requests.JoinTableRequest
+import com.example.godutch.Payload.Requests.PassCodeRequest
 import com.example.godutch.Payload.Responses.GetAllTablesResponse
 import com.example.godutch.Payload.Responses.GetRestaurantsResponse
 import com.example.godutch.R
@@ -31,13 +36,21 @@ import java.io.IOException
 
 class RestaurantsActivity : AppCompatActivity() {
 
+
+    val client : OkHttpClient = OkHttpClient()
+    val request : OkHttpRequest = OkHttpRequest(client)
+    var restaurantsListView : ListView? = null
+    var adapter : RestaurantsListAdapter? = null
+    var progressBar: ProgressBar? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_restaurants)
 
+        progressBar = findViewById(R.id.restaurants_progressbar)
+        startProgressBar()
+
         val activity: Activity = this
-        val client : OkHttpClient = OkHttpClient()
-        val request : OkHttpRequest = OkHttpRequest(client)
 
         val preferences = getSharedPreferences("APP_PREFERENCES", Context.MODE_PRIVATE)
         val token = preferences.getString("token", "")
@@ -48,45 +61,26 @@ class RestaurantsActivity : AppCompatActivity() {
         supportActionBar?.setCustomView(R.layout.appbar_godutch)
 
         val restaurantSearchField = findViewById<SearchView>(R.id.restaurantSearchField)
-        val restaurantsListView = findViewById<ListView>(R.id.restaurantsListView)
-        var adapter : RestaurantsListAdapter? = null
-        val restaurantList = ArrayList<Restaurant>()
+        restaurantsListView = findViewById(R.id.restaurantsListView)
 
         var url = AppCommons.RootUrl + "restaurant/all"
-        request.GET(url, token, object: Callback {
-            override fun onResponse(call: Call?, response: Response) {
-                val responseData = response.body()?.string()
-                runOnUiThread {
-                    try {
-                        val json = JSONObject(responseData)
-                        println("Request Successful!!")
-                        var result = GetRestaurantsResponse(
-                            json["restaurants"] as JSONArray
-                        )
 
-                        for (i in 0 until result.restaurants.length()) {
-                            val restaurant = result.restaurants.getJSONObject(i)
-                            restaurantList.add(Restaurant(restaurant["id"] as String, restaurant["name"] as String, restaurant["latitude"] as Double, restaurant["longitude"] as Double))
-                        }
+        val swipeToRefresh = findViewById<SwipeRefreshLayout>(R.id.swipeToRefreshRestaurants)
+        swipeToRefresh.setProgressBackgroundColorSchemeColor(ContextCompat.getColor(applicationContext, R.color.colorPrimary))
+        swipeToRefresh.setColorSchemeColors(Color.WHITE)
+        swipeToRefresh.setOnRefreshListener {
+            createListviewData(activity, url, token)
+            swipeToRefresh!!.isRefreshing = false
+        }
 
-                        val sortedList = restaurantList.sortedWith(compareBy { it.name })
-                        adapter = RestaurantsListAdapter(activity, android.R.layout.simple_list_item_1, sortedList)
-                        restaurantsListView.adapter = adapter
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                }
-            }
-
-            override fun onFailure(call: Call?, e: IOException?) {
-                println("Can not get restaurants.")
-            }
-        })
+        createListviewData(activity, url, token)
 
 
-        restaurantsListView.setOnItemClickListener { parent, view, position, id ->
+        restaurantsListView!!.setOnItemClickListener { parent, view, position, id ->
             val restaurant = adapter?.getItem(position)
             val popup = PopupMenu(this, view)
+
+            startProgressBar()
 
             url = AppCommons.RootUrl + "table/" + restaurant!!.id + "/all"
             request.GET(url, token, object: Callback {
@@ -109,6 +103,7 @@ class RestaurantsActivity : AppCompatActivity() {
                                 popup.menu.add(sortedList[i]["name"] as String)
                             }
                             popup.show()
+                            stopProgressBar()
 
                         } catch (e: Exception) {
                             e.printStackTrace()
@@ -122,13 +117,14 @@ class RestaurantsActivity : AppCompatActivity() {
             })
 
             popup.setOnMenuItemClickListener { item ->
-
+                startProgressBar()
                 url = AppCommons.RootUrl + "table/" + restaurant!!.id + "/" + item
                 request.GET(url, token, object: Callback {
                     override fun onResponse(call: Call?, response: Response) {
                         val responseData = response.body()?.string()
                         runOnUiThread {
                             try {
+                                stopProgressBar()
                                 val json = JSONObject(responseData)
                                 println("Request Successful!!")
                                 var table = RestaurantTable(
@@ -210,7 +206,8 @@ class RestaurantsActivity : AppCompatActivity() {
         builder.setView(passCodeField)
 
         builder.setPositiveButton(android.R.string.yes) { dialog, which ->
-            val a = passCodeField.text.toString()
+            startProgressBar()
+            val passCodeRequest =  PassCodeRequest(passCodeField.text.toString())
             if(table.isProtected && passCodeField.text.toString() == table.passCode) {
                 val joinTableRequest = JoinTableRequest(user.userId, user.username)
                 val joinTableUrl = AppCommons.RootUrl + "table/" + restaurant.id + "/" + table.name + "/join"
@@ -219,6 +216,7 @@ class RestaurantsActivity : AppCompatActivity() {
                         val responseData = response.body()?.string()
                         runOnUiThread {
                             try {
+                                stopProgressBar()
                                 val intent = Intent(getContext(), TableActivity::class.java)
                                 intent.putExtra("restaurantId", restaurant.id)
                                 intent.putExtra("restaurantName", restaurant.name)
@@ -234,12 +232,13 @@ class RestaurantsActivity : AppCompatActivity() {
 
                     override fun onFailure(call: Call?, e: IOException?) {
                         println("User can not added.")
+                        stopProgressBar()
                     }
                 })
 
             } else if(!table.isProtected) {
                 var url = AppCommons.RootUrl + "table/" + restaurant.id + "/" + table.name
-                request.POST(url, a, user.token, object: Callback {
+                request.POST(url, passCodeRequest, user.token, object: Callback {
                     override fun onResponse(call: Call?, response: Response) {
                         val joinTableRequest = JoinTableRequest(user.userId, user.username)
                         val joinTableUrl = AppCommons.RootUrl + "table/" + restaurant.id + "/" + table.name + "/join"
@@ -247,6 +246,7 @@ class RestaurantsActivity : AppCompatActivity() {
                             override fun onResponse(call: Call?, response: Response) {
                                 runOnUiThread {
                                     try {
+                                        stopProgressBar()
                                         val intent = Intent(getContext(), TableActivity::class.java)
                                         intent.putExtra("restaurantId", restaurant.id)
                                         intent.putExtra("restaurantName", restaurant.name)
@@ -262,22 +262,78 @@ class RestaurantsActivity : AppCompatActivity() {
 
                             override fun onFailure(call: Call?, e: IOException?) {
                                 println("User can not added.")
+                                stopProgressBar()
                             }
                         })
                     }
 
                     override fun onFailure(call: Call?, e: IOException?) {
                         println("Passcode can not updated.")
+                        stopProgressBar()
                     }
                 })
+            } else {
+                AlertDialog.Builder(this)
+                    .setMessage("Table password is not correct.")
+                    .setIcon(android.R.drawable.ic_dialog_alert)
+                    .setPositiveButton(android.R.string.ok, null).show()
+                stopProgressBar()
             }
-
         }
 
-        builder.setNegativeButton(android.R.string.no) { dialog, which ->
-
-        }
+        builder.setNegativeButton(android.R.string.no, null)
 
         builder.show()
+    }
+
+    private fun createListviewData(activity: Activity, url: String, token: String) {
+        request.GET(url, token, object: Callback {
+            override fun onResponse(call: Call?, response: Response) {
+                val responseData = response.body()?.string()
+                runOnUiThread {
+                    try {
+                        stopProgressBar()
+
+                        val json = JSONObject(responseData)
+                        println("Request Successful!!")
+                        var result = GetRestaurantsResponse(
+                            json["restaurants"] as JSONArray
+                        )
+
+                        val restaurantList = ArrayList<Restaurant>()
+
+                        for (i in 0 until result.restaurants.length()) {
+                            val restaurant = result.restaurants.getJSONObject(i)
+                            restaurantList.add(Restaurant(restaurant["id"] as String, restaurant["name"] as String, restaurant["latitude"] as Double, restaurant["longitude"] as Double))
+                        }
+
+                        val sortedList = restaurantList.sortedWith(compareBy { it.name })
+                        adapter = RestaurantsListAdapter(activity, android.R.layout.simple_list_item_1, sortedList)
+                        restaurantsListView!!.adapter = adapter
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }
+
+            override fun onFailure(call: Call?, e: IOException?) {
+                runOnUiThread {
+                    stopProgressBar()
+                }
+                println("Can not get restaurants.")
+            }
+        })
+    }
+
+    private fun startProgressBar() {
+        progressBar!!.visibility = ProgressBar.VISIBLE
+        window.setFlags(
+            WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+            WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE)
+    }
+
+    private fun stopProgressBar() {
+        progressBar!!.visibility = ProgressBar.INVISIBLE
+        window.clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE)
     }
 }

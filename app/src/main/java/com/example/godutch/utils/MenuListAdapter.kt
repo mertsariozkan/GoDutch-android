@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import android.widget.BaseAdapter
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import com.example.godutch.Payload.Requests.AddOrderRequest
 import com.example.godutch.R
 import com.example.godutch.models.MenuItem
@@ -19,7 +20,7 @@ import java.io.IOException
 import java.util.*
 
 
-class MenuListAdapter(context: Context, private val restaurantId: String, private val tableName: String) : BaseAdapter() {
+class MenuListAdapter(private val context: Context, private val restaurantId: String, private val tableName: String) : BaseAdapter() {
 
     private val mData = ArrayList<MenuItem>()
     private val sectionHeader = TreeSet<Int>()
@@ -33,6 +34,13 @@ class MenuListAdapter(context: Context, private val restaurantId: String, privat
 
     private val mInflater: LayoutInflater = context
         .getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
+
+    private var paymentInitiated = false
+
+    fun notifyPaymentInitiation() {
+        paymentInitiated = true
+        notifyDataSetChanged()
+    }
 
     fun addItem(item: MenuItem) {
         mData.add(item)
@@ -105,6 +113,12 @@ class MenuListAdapter(context: Context, private val restaurantId: String, privat
                     }
                 })
             }
+
+            if(paymentInitiated) {
+                holder.addButton!!.background = ContextCompat.getDrawable(context, R.drawable.grayfill_squared)
+                holder.addButton!!.isClickable = false
+            }
+
         } else if (rowType == TYPE_HEADER) {
             holder.name!!.setText(mData[position].name)
         }

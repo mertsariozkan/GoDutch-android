@@ -62,6 +62,22 @@ class OkHttpRequest(var client : OkHttpClient) {
         return call
     }
 
+    fun POST(url: String, token: String, callback: Callback): Call {
+
+        val requestBody = RequestBody.create(JSON, "")
+
+        val request = Request.Builder()
+            .url(url)
+            .addHeader("Authorization", token)
+            .post(requestBody)
+            .build()
+
+
+        val call = client.newCall(request)
+        call.enqueue(callback)
+        return call
+    }
+
     fun DELETE(url: String, parameters: Any, token: String, callback: Callback): Call {
 
         val jsonString : String = if(parameters is String) parameters else Gson().toJson(parameters)

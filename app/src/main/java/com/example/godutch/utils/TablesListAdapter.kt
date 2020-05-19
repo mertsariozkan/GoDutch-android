@@ -10,10 +10,10 @@ import android.widget.Filterable
 import android.widget.TextView
 import androidx.annotation.LayoutRes
 
-class TablesListAdapter(context: Context, @LayoutRes private val layoutResource: Int, private val tables: List<String>):
+class TablesListAdapter(context: Context, @LayoutRes private val layoutResource: Int, private val tables: ArrayList<String>):
     ArrayAdapter<String>(context, layoutResource, tables), Filterable {
 
-    private var mTables: List<String> = tables
+    private var mTables: ArrayList<String> = tables
 
     override fun getCount(): Int {
         return mTables.size
@@ -21,6 +21,11 @@ class TablesListAdapter(context: Context, @LayoutRes private val layoutResource:
 
     override fun getItem(p0: Int): String? {
         return mTables[p0]
+    }
+
+    fun removeAtPosition(position: Int) {
+        mTables.removeAt(position)
+        notifyDataSetChanged()
     }
 
 
@@ -41,7 +46,7 @@ class TablesListAdapter(context: Context, @LayoutRes private val layoutResource:
     override fun getFilter(): Filter {
         return object : Filter() {
             override fun publishResults(charSequence: CharSequence?, filterResults: FilterResults) {
-                mTables = filterResults.values as List<String>
+                mTables = filterResults.values as ArrayList<String>
                 notifyDataSetChanged()
             }
 

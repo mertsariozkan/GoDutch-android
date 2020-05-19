@@ -1,13 +1,12 @@
 package com.example.godutch.views
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.widget.Button
-import android.widget.EditText
-import android.widget.TextView
-import android.widget.Toast
+import android.view.WindowManager
+import android.widget.*
 import com.example.godutch.Payload.Requests.SignInRequest
 import com.example.godutch.Payload.Responses.SignupResponse
 import com.example.godutch.R
@@ -23,6 +22,8 @@ import org.json.JSONObject
 import java.io.IOException
 
 class LoginActivity : Activity() {
+
+    var progressBar : ProgressBar? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -48,11 +49,14 @@ class LoginActivity : Activity() {
         val client : OkHttpClient = OkHttpClient()
         val request : OkHttpRequest = OkHttpRequest(client)
 
+        progressBar = findViewById(R.id.login_progressbar)
         val usernameField: EditText = findViewById(R.id.usernameField)
         val passwordField: EditText = findViewById(R.id.passwordField)
 
         val loginButton = findViewById<Button>(R.id.loginButton)
         loginButton.setOnClickListener {
+            startProgressBar()
+
             var signInRequest = SignInRequest(usernameField.text.toString())
             signInRequest.password = passwordField.text.toString()
 
@@ -64,6 +68,7 @@ class LoginActivity : Activity() {
                         val responseData = response.body()?.string()
                         activity.runOnUiThread {
                             try {
+                                stopProgressBar()
                                 val json = JSONObject(responseData)
                                 println("Request Successful!!")
                                 result = SignupResponse(
@@ -96,15 +101,19 @@ class LoginActivity : Activity() {
                                 finish()
                             } catch (e: JSONException) {
                                 e.printStackTrace()
+                                activity.runOnUiThread {
+                                    stopProgressBar()
+                                    Toast.makeText(applicationContext, "Username or password is not correct.", Toast.LENGTH_LONG).show()
+                                }
                             }
                         }
                     }
 
                     override fun onFailure(call: Call?, e: IOException?) {
                         activity.runOnUiThread {
+                            stopProgressBar()
                             Toast.makeText(applicationContext, "Can't log in", Toast.LENGTH_SHORT).show()
                         }
-
                     }
                 })
             }
@@ -117,6 +126,18 @@ class LoginActivity : Activity() {
             startActivity(intent)
         }
 
+    }
+
+    private fun startProgressBar() {
+        progressBar!!.visibility = ProgressBar.VISIBLE
+        window.setFlags(
+            WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+            WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE)
+    }
+
+    private fun stopProgressBar() {
+        progressBar!!.visibility = ProgressBar.INVISIBLE
+        window.clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE)
     }
 
 

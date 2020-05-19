@@ -133,4 +133,6 @@ class TableActivity : AppCompatActivity(), MenuFragment.OnFragmentInteractionLis
         return true
     }
 
+    override fun onBackPressed() { }
+
 }
