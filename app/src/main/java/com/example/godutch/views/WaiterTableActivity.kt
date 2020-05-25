@@ -5,7 +5,9 @@ import android.graphics.Color
 import android.os.Bundle
 import android.view.ContextMenu
 import android.view.View
+import android.view.WindowManager
 import android.widget.*
+import androidx.appcompat.app.ActionBar
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -18,6 +20,7 @@ import com.example.godutch.models.UserSpecifiedOrder
 import com.example.godutch.utils.AppCommons
 import com.example.godutch.utils.OkHttpRequest
 import com.example.godutch.utils.WaiterOrdersListAdapter
+import kotlinx.android.synthetic.main.appbar_godutch.*
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.OkHttpClient
@@ -42,6 +45,8 @@ class WaiterTableActivity : AppCompatActivity() {
     var totalAmountText: TextView? = null
     var totalAmount: Double = 0.00
 
+    lateinit var progressBar: ProgressBar
+
     var paymentInitiated = false
 
     var timer: Timer? = null
@@ -49,6 +54,12 @@ class WaiterTableActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_waiter_table)
+
+        supportActionBar?.displayOptions = ActionBar.DISPLAY_SHOW_CUSTOM
+        supportActionBar?.setCustomView(R.layout.appbar_godutch)
+
+        progressBar = findViewById(R.id.waiter_tbl_pb)
+
 
         val swipeToRefresh = findViewById<SwipeRefreshLayout>(R.id.swipeToRefreshOrders)
         swipeToRefresh.setProgressBackgroundColorSchemeColor(
@@ -90,6 +101,7 @@ class WaiterTableActivity : AppCompatActivity() {
                 request.POST(url, token!!, object : Callback {
                     override fun onResponse(call: Call?, response: Response) {
                         runOnUiThread {
+                            stopTimer()
                             finish()
                         }
                     }
@@ -109,6 +121,8 @@ class WaiterTableActivity : AppCompatActivity() {
 
         restaurantId = intent.getStringExtra("restaurantId")
         tableName = intent.getStringExtra("tableName")
+
+        actionbar_title.text = tableName
 
         startTimer()
     }
@@ -137,9 +151,7 @@ class WaiterTableActivity : AppCompatActivity() {
                     request.DELETE(url, deleteOrderRequest, token!!, object : Callback {
                         override fun onResponse(call: Call?, response: Response) {
                             runOnUiThread {
-                                adapter!!.removeAtPosition(info.position)
-                                totalAmount -= order.item.price
-                                totalAmountText!!.text = "$totalAmount TL"
+                                startProgressBar()
                             }
                             println("Order deleted.")
                         }
@@ -180,6 +192,7 @@ class WaiterTableActivity : AppCompatActivity() {
                         val responseData = response.body()?.string()
                         runOnUiThread {
                             try {
+                                stopProgressBar()
                                 val json = JSONObject(responseData)
                                 println("Request Successful!!")
                                 val users: JSONArray = json["users"] as JSONArray
@@ -232,7 +245,7 @@ class WaiterTableActivity : AppCompatActivity() {
                                                 )
                                             )
 
-                                            totalAmount += (item["price"] as Double)
+                                            totalAmount += (item["price"] as Double) * (order["count"] as Int)
                                         }
 
                                         totalAmountText!!.text = "$totalAmount TL"
@@ -259,5 +272,18 @@ class WaiterTableActivity : AppCompatActivity() {
     private fun stopTimer() {
         timer!!.cancel()
         timer!!.purge()
+    }
+
+    private fun startProgressBar() {
+        progressBar!!.visibility = ProgressBar.VISIBLE
+        window.setFlags(
+            WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+            WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+        )
+    }
+
+    private fun stopProgressBar() {
+        progressBar!!.visibility = ProgressBar.INVISIBLE
+        window.clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE)
     }
 }

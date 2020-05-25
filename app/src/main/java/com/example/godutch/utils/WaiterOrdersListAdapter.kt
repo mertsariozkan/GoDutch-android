@@ -1,6 +1,7 @@
 package com.example.godutch.utils
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.view.LayoutInflater
@@ -112,29 +113,35 @@ class WaiterOrdersListAdapter(context: Context, private val activity: Activity, 
         } else if (rowType == TYPE_USER) {
             holder.name!!.text = (mData[position] as TableUser).username
             holder.deleteUserButton!!.setOnClickListener {
-                val url = AppCommons.RootUrl + "table/" + restaurantId + "/" + tableName
-                request.DELETE(
-                    url,
-                    DeleteUserRequest((mData[position] as TableUser).id, (mData[position] as TableUser).username),
-                    token!!,
-                    object : Callback {
-                        override fun onResponse(call: Call?, response: Response) {
-                             activity.runOnUiThread {
-                                try {
-                                    activity.finish()
-                                    activity.overridePendingTransition(0, 0)
-                                    activity.startActivity(activity.intent)
-                                    activity.overridePendingTransition(0, 0)
-                                } catch (e: Exception) {
-                                    e.printStackTrace()
+                AlertDialog.Builder(activity)
+                    .setTitle("Confirmation")
+                    .setMessage("Are you sure you want to remove this user from table?")
+                    .setIcon(android.R.drawable.ic_dialog_alert)
+                    .setPositiveButton(android.R.string.yes) { dialog, whichButton ->
+                        val url = AppCommons.RootUrl + "table/" + restaurantId + "/" + tableName
+                        request.DELETE(
+                            url,
+                            DeleteUserRequest((mData[position] as TableUser).id, (mData[position] as TableUser).username),
+                            token!!,
+                            object : Callback {
+                                override fun onResponse(call: Call?, response: Response) {
+                                    activity.runOnUiThread {
+                                        try {
+                                            activity.finish()
+                                            activity.overridePendingTransition(0, 0)
+                                            activity.startActivity(activity.intent)
+                                            activity.overridePendingTransition(0, 0)
+                                        } catch (e: Exception) {
+                                            e.printStackTrace()
+                                        }
+                                    }
                                 }
-                            }
-                        }
 
-                        override fun onFailure(call: Call?, e: IOException?) {
-                            println("Can not get table orders.")
-                        }
-                    })
+                                override fun onFailure(call: Call?, e: IOException?) {
+                                    println("Can not get table orders.")
+                                }
+                            })
+                    }.setNegativeButton(android.R.string.no, null).show()
             }
 
             if(paymentInitiated) {

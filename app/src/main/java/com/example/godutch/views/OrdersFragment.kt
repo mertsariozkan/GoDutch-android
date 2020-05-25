@@ -32,6 +32,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
 import java.util.*
+import java.util.concurrent.TimeUnit
 
 class OrdersFragment : Fragment() {
 
@@ -55,6 +56,9 @@ class OrdersFragment : Fragment() {
     val client = OkHttpClient()
     val request = OkHttpRequest(client)
 
+    var userIsPaid = false
+    var payButtonClicked = false
+
 
     var adapter: MyOrdersListAdapter? = null
 
@@ -64,8 +68,6 @@ class OrdersFragment : Fragment() {
         super.onCreate(savedInstanceState)
         this.savedInstanceState = savedInstanceState
         val activity: FragmentActivity? = activity
-        val client = OkHttpClient()
-        val request = OkHttpRequest(client)
 
         val args = arguments
         restaurantId = args!!.getString("restaurantId")
@@ -110,11 +112,6 @@ class OrdersFragment : Fragment() {
     ): View? {
         val view = inflater.inflate(R.layout.fragment_orders, container, false)
         progressBar = view.f_order_progressBar
-        progressBar!!.visibility = ProgressBar.VISIBLE
-        activity!!.window.setFlags(
-            WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
-            WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
-        )
         ordersListView = view.my_orders_listview
         swipeToRefresh = view.swipeToRefreshOrders
         swipeToRefresh!!.setProgressBackgroundColorSchemeColor(
@@ -137,6 +134,8 @@ class OrdersFragment : Fragment() {
         payLayout = view.pay_layout
 
         payButton!!.setOnClickListener {
+            payButtonClicked = true
+            startProgressBar()
             val totalAmountStr = totalAmountLabel!!.text.toString()
             val totalAmount = totalAmountStr.substring(0, totalAmountStr.length - 3).toDouble()
 
@@ -152,13 +151,22 @@ class OrdersFragment : Fragment() {
             payLayout!!.background = ContextCompat.getDrawable(activity!!, R.drawable.grayfill)
 
             val paymentUrl = AppCommons.RootUrl + "payment"
+            val client = OkHttpClient.Builder()
+                .connectTimeout(30, TimeUnit.SECONDS)
+                .writeTimeout(30, TimeUnit.SECONDS)
+                .readTimeout(30, TimeUnit.SECONDS)
+                .build()
+            val request = OkHttpRequest(client)
             request.POST(paymentUrl, paymentRequest, token!!, object: Callback {
                 override fun onResponse(call: Call?, response: Response) {
                     val responseData = response.body()?.string()
                     val json = JSONObject(responseData)
                     activity!!.runOnUiThread {
                         try {
+                            stopProgressBar()
+                            payButtonClicked = false
                             if(json["success"] as Boolean) {
+                                userIsPaid = true
                                 android.app.AlertDialog.Builder(activity!!)
                                     .setMessage("Payment completed successfully.")
                                     .setIcon(android.R.drawable.ic_dialog_info)
@@ -177,7 +185,17 @@ class OrdersFragment : Fragment() {
                     }
                 }
                 override fun onFailure(call: Call?, e: IOException?) {
-                    println("Can not get cards.")
+                    activity!!.runOnUiThread {
+                        stopProgressBar()
+                        payButtonClicked = false
+
+                        payButton!!.isClickable = true
+                        payLayout!!.background = ContextCompat.getDrawable(activity!!, R.drawable.greenfill)
+                        android.app.AlertDialog.Builder(activity!!)
+                            .setMessage("Payment failed. Please try with another registered card.")
+                            .setIcon(android.R.drawable.ic_dialog_alert)
+                            .setPositiveButton(android.R.string.ok, null).show()
+                    }
                 }
             })
         }
@@ -260,8 +278,6 @@ class OrdersFragment : Fragment() {
                         if (activity != null) {
                             activity!!.runOnUiThread {
                                 try {
-                                    progressBar!!.visibility = ProgressBar.INVISIBLE
-                                    activity!!.window.clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE)
                                     val json = JSONObject(responseData)
                                     println("Request Successful!!")
                                     val users: JSONArray = json["users"] as JSONArray
@@ -291,15 +307,16 @@ class OrdersFragment : Fragment() {
                                             totalAmountLabel!!.text = "$totalAmount TL"
                                             ordersListView!!.adapter = adapter
 
-                                            if((json["paymentActive"] as Boolean) && !(user["paid"] as Boolean)) {
+                                            if(userIsPaid || payButtonClicked) {
+                                                payButton!!.isClickable = false
+                                                payLayout!!.background = ContextCompat.getDrawable(activity!!, R.drawable.grayfill)
+                                                registerForContextMenu(ordersListView!!)
+                                            }
+                                            else if((json["paymentActive"] as Boolean)) {
                                                 payButton!!.isClickable = true
                                                 payLayout!!.background = ContextCompat.getDrawable(activity!!, R.drawable.greenfill)
                                                 (activity as TableActivity).supportActionBar?.setDisplayHomeAsUpEnabled(false)
                                                 unregisterForContextMenu(ordersListView!!)
-                                            } else if(!(json["paymentActive"] as Boolean)) {
-                                                payButton!!.isClickable = false
-                                                payLayout!!.background = ContextCompat.getDrawable(activity!!, R.drawable.grayfill)
-                                                registerForContextMenu(ordersListView!!)
                                             }
                                         }
                                     }
@@ -330,4 +347,16 @@ class OrdersFragment : Fragment() {
         timer!!.purge()
     }
 
+    private fun startProgressBar() {
+        progressBar!!.visibility = ProgressBar.VISIBLE
+        activity!!.window.setFlags(
+            WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+            WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+        )
+    }
+
+    private fun stopProgressBar() {
+        progressBar!!.visibility = ProgressBar.INVISIBLE
+        activity!!.window.clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE)
+    }
 }

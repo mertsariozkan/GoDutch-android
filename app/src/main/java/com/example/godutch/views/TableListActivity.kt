@@ -19,6 +19,7 @@ import com.example.godutch.Payload.Responses.GetAllTablesResponse
 import com.example.godutch.R
 import com.example.godutch.utils.AppCommons
 import com.example.godutch.utils.OkHttpRequest
+import com.example.godutch.utils.SortingHelper
 import com.example.godutch.utils.TablesListAdapter
 import kotlinx.android.synthetic.main.activity_table_list.*
 import okhttp3.Call
@@ -36,15 +37,15 @@ class TableListActivity : AppCompatActivity() {
 
     var tablesListView: ListView? = null
 
-    val client : OkHttpClient = OkHttpClient()
-    val request : OkHttpRequest = OkHttpRequest(client)
+    val client: OkHttpClient = OkHttpClient()
+    val request: OkHttpRequest = OkHttpRequest(client)
     var progressBar: ProgressBar? = null
 
     var activity: Activity? = null
-    var token : String? = null
-    var restaurantId : String? = null
-    var url : String? = null
-    var adapter : TablesListAdapter? = null
+    var token: String? = null
+    var restaurantId: String? = null
+    var url: String? = null
+    var adapter: TablesListAdapter? = null
     val adapterLock = Any()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -54,7 +55,8 @@ class TableListActivity : AppCompatActivity() {
         progressBar!!.visibility = ProgressBar.VISIBLE
         window.setFlags(
             WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
-            WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE)
+            WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+        )
 
         supportActionBar?.displayOptions = ActionBar.DISPLAY_SHOW_CUSTOM
         supportActionBar?.setCustomView(R.layout.appbar_godutch)
@@ -72,7 +74,12 @@ class TableListActivity : AppCompatActivity() {
 
 
         val swipeToRefresh = findViewById<SwipeRefreshLayout>(R.id.swipeToRefreshTables)
-        swipeToRefresh.setProgressBackgroundColorSchemeColor(ContextCompat.getColor(applicationContext, R.color.colorPrimary))
+        swipeToRefresh.setProgressBackgroundColorSchemeColor(
+            ContextCompat.getColor(
+                applicationContext,
+                R.color.colorPrimary
+            )
+        )
         swipeToRefresh.setColorSchemeColors(Color.WHITE)
         swipeToRefresh.setOnRefreshListener {
             createListviewData()
@@ -138,7 +145,8 @@ class TableListActivity : AppCompatActivity() {
                 .setIcon(android.R.drawable.ic_dialog_alert)
                 .setPositiveButton(android.R.string.yes) { dialog, whichButton ->
                     var info = item.menuInfo as AdapterView.AdapterContextMenuInfo
-                    val url = AppCommons.RootUrl + "table/" + restaurantId + "/" + tablesListView!!.getItemAtPosition(info.position) + "/reset"
+                    val url =
+                        AppCommons.RootUrl + "table/" + restaurantId + "/" + tablesListView!!.getItemAtPosition(info.position) + "/reset"
                     request.POST(url, token!!, object : Callback {
                         override fun onResponse(call: Call?, response: Response) {
                             activity!!.runOnUiThread {
@@ -157,7 +165,7 @@ class TableListActivity : AppCompatActivity() {
 
 
     private fun createListviewData() {
-        request.GET(url!!, token!!, object: Callback {
+        request.GET(url!!, token!!, object : Callback {
             override fun onResponse(call: Call?, response: Response) {
                 val responseData = response.body()?.string()
                 runOnUiThread {
@@ -171,12 +179,14 @@ class TableListActivity : AppCompatActivity() {
                             json["restaurantTableDtos"] as JSONArray
                         )
 
-                        val tableList = ArrayList<String>()
+                        var tableList = ArrayList<String>()
 
                         for (i in 0 until result.restaurantTables.length()) {
                             val table = result.restaurantTables.getJSONObject(i)
                             tableList.add(table["name"] as String)
                         }
+                        tableList = SortingHelper.sortList(tableList)
+
                         synchronized(adapterLock) {
                             adapter = TablesListAdapter(activity!!, android.R.layout.simple_list_item_1, tableList)
                             adapter!!.filter.filter(tableSearchField.query.toString())
@@ -191,7 +201,10 @@ class TableListActivity : AppCompatActivity() {
             }
 
             override fun onFailure(call: Call?, e: IOException?) {
-                println("Can not get tables.")
+                runOnUiThread {
+                    progressBar!!.visibility = ProgressBar.INVISIBLE
+                    window.clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE)
+                }
             }
         })
     }
@@ -216,8 +229,9 @@ class TableListActivity : AppCompatActivity() {
     }
 
     private fun stopTimer() {
-        if(timer
-            != null) {
+        if (timer
+            != null
+        ) {
             timer!!.cancel()
             timer!!.purge()
             timer = null
@@ -225,7 +239,7 @@ class TableListActivity : AppCompatActivity() {
     }
 
     companion object {
-        var timer : Timer? = null
+        var timer: Timer? = null
     }
 
 }

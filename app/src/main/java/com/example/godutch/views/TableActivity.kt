@@ -15,6 +15,7 @@ import com.example.godutch.utils.AppCommons
 import com.example.godutch.utils.OkHttpRequest
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import kotlinx.android.synthetic.main.activity_table.*
+import kotlinx.android.synthetic.main.appbar_godutch.*
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.OkHttpClient
@@ -69,6 +70,9 @@ class TableActivity : AppCompatActivity(), MenuFragment.OnFragmentInteractionLis
         var restaurantName = intent.getStringExtra("restaurantName")
         tableName = intent.getStringExtra("tableName")
         var userName = intent.getStringExtra("userName")
+
+        actionbar_title.text = tableName + ""
+        actionbar_username.text = userName + ""
 
         val preferences = getSharedPreferences("APP_PREFERENCES", Context.MODE_PRIVATE)
         token = preferences.getString("token", "")

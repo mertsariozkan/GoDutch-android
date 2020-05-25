@@ -1,5 +1,6 @@
 package com.example.godutch.utils
 
+import com.example.godutch.models.Restaurant
 import okhttp3.MediaType
 
 object AppCommons {
