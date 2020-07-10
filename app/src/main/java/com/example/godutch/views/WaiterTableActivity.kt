@@ -55,8 +55,15 @@ class WaiterTableActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_waiter_table)
 
+
+        val preferences = getSharedPreferences("APP_PREFERENCES", Context.MODE_PRIVATE)
+
         supportActionBar?.displayOptions = ActionBar.DISPLAY_SHOW_CUSTOM
         supportActionBar?.setCustomView(R.layout.appbar_godutch)
+
+        val userName = preferences.getString("username","")
+        actionbar_username.text = userName + ""
+        actionbar_profile.visibility = View.VISIBLE
 
         progressBar = findViewById(R.id.waiter_tbl_pb)
 
@@ -116,7 +123,6 @@ class WaiterTableActivity : AppCompatActivity() {
         ordersListView = findViewById<ListView>(R.id.waiter_ordersListView)
         totalAmountText = findViewById<TextView>(R.id.waiter_totalAmountValue)
 
-        val preferences = getSharedPreferences("APP_PREFERENCES", Context.MODE_PRIVATE)
         token = preferences.getString("token", "")
 
         restaurantId = intent.getStringExtra("restaurantId")

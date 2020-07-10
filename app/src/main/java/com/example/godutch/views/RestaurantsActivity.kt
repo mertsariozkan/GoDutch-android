@@ -15,6 +15,7 @@ import android.opengl.Visibility
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
 import android.view.WindowManager
 import android.widget.*
 import androidx.appcompat.app.ActionBar
@@ -95,6 +96,10 @@ class RestaurantsActivity : AppCompatActivity() {
 
         supportActionBar?.displayOptions = ActionBar.DISPLAY_SHOW_CUSTOM
         supportActionBar?.setCustomView(R.layout.appbar_godutch)
+
+        val userName = preferences.getString("username","")
+        actionbar_username.text = userName + ""
+        actionbar_profile.visibility = View.VISIBLE
 
         val restaurantSearchField = findViewById<SearchView>(R.id.restaurantSearchField)
         restaurantsListView = findViewById(R.id.restaurantsListView)
@@ -288,15 +293,18 @@ class RestaurantsActivity : AppCompatActivity() {
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         when (requestCode) {
             11 -> {
+                val restaurantSuggestionLayout = findViewById<LinearLayout>(R.id.restaurantSuggestionLayout)
                 if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
                     fusedLocationClient.lastLocation
                         .addOnSuccessListener { location: Location? ->
                             currentLocation = location
+                            if(currentLocation == null)
+                                restaurantSuggestionLayout.visibility = LinearLayout.GONE
+
                             var url = AppCommons.RootUrl + "restaurant/all"
                             createListviewData(activity, url, token)
                         }
                 } else {
-                    val restaurantSuggestionLayout = findViewById<LinearLayout>(R.id.restaurantSuggestionLayout)
                     restaurantSuggestionLayout.visibility = LinearLayout.GONE
                 }
                 return
@@ -430,6 +438,8 @@ class RestaurantsActivity : AppCompatActivity() {
     }
 
     private fun createListviewData(activity: Activity, url: String, token: String) {
+        if(currentLocation == null)
+            restaurantSuggestionLayout.visibility = LinearLayout.GONE
         request.GET(url, token, object : Callback {
             override fun onResponse(call: Call?, response: Response) {
                 val responseData = response.body()?.string()

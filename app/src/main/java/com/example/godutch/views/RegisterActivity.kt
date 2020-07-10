@@ -38,30 +38,24 @@ class RegisterActivity : AppCompatActivity() {
 
         val emailField: EditText = findViewById(R.id.emailField)
         val passwordField: EditText = findViewById(R.id.passwordField)
+        val nameField: EditText = findViewById(R.id.nameField)
+        val surnameField: EditText = findViewById(R.id.surnameField)
+
         progressBar = findViewById(R.id.register_progressbar)
 
-        val cityDropdown: Spinner = findViewById(R.id.cityDropdown)
-        ArrayAdapter.createFromResource(
-            this,
-            R.array.cities_array,
-            android.R.layout.simple_spinner_item
-        ).also { adapter ->
-            // Specify the layout to use when the list of choices appears
-            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-            // Apply the adapter to the spinner
-            cityDropdown.adapter = adapter
-        }
 
         val registerButton: Button = findViewById(R.id.registerButton)
 
         registerButton.setOnClickListener {
             var user = User(emailField.text.toString())
             user.password = passwordField.text.toString()
-            user.username = usernameField.text.toString()
+            user.username = emailField.text.toString().split("@")[0]
+            user.name = nameField.text.toString()
+            user.surname = surnameField.text.toString()
             user.roles = Array(1,init = {"user"})
             var passwordRepeat = repeatPasswordField.text.toString()
 
-            if(user.email != "" && user.username != "" && user.password != "" && passwordRepeat != "" && user.password == passwordRepeat) {
+            if(user.email != "" && user.name != "" && user.surname != "" && user.password != "" && passwordRepeat != "" && user.password == passwordRepeat) {
                 startProgressBar()
                 val url = AppCommons.RootUrl + "auth/signup"
                 var result : SignupResponse? = null
@@ -76,7 +70,8 @@ class RegisterActivity : AppCompatActivity() {
                                 println("Request Successful!!")
                                 result = SignupResponse(
                                     json["id"] as String,
-                                    json["username"] as String,
+                                    json["name"] as String,
+                                    json["surname"] as String,
                                     json["email"] as String,
                                     json["roles"] as JSONArray,
                                     json["accessToken"] as String,
@@ -86,7 +81,7 @@ class RegisterActivity : AppCompatActivity() {
                                 val editor = preferences.edit()
                                 editor.putString("token", result!!.tokenType+" "+ result!!.accessToken)
                                 editor.putString("userId", result!!.id)
-                                editor.putString("username", result!!.username)
+                                editor.putString("username", result!!.name + " " + result!!.surname)
                                 editor.putString("email", result!!.email)
                                 editor.apply()
 

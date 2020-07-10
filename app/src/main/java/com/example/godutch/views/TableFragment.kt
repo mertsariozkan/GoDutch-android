@@ -113,7 +113,7 @@ class TableFragment : Fragment() {
                                     println("Request Successful!!")
 
                                     if(json["paymentActive"] as Boolean)
-                                        (activity as TableActivity).supportActionBar?.setDisplayHomeAsUpEnabled(false)
+                                        (activity as TableActivity).invalidateOptionsMenu()
 
                                     val users: JSONArray = json["users"] as JSONArray
 

@@ -159,7 +159,7 @@ class MenuFragment : Fragment() {
 
                                     if(json["paymentActive"] as Boolean) {
                                         adapter!!.notifyPaymentInitiation()
-                                        (activity as TableActivity).supportActionBar?.setDisplayHomeAsUpEnabled(false)
+                                        (activity as TableActivity).invalidateOptionsMenu()
                                     }
 
                                     var userInTable = false

@@ -23,25 +23,7 @@
             android:layout_marginEnd="8dp" android:layout_marginRight="8dp"
             app:layout_constraintStart_toStartOf="parent" android:layout_marginLeft="8dp"
             android:layout_marginStart="8dp"/>
-    <LinearLayout
-            android:orientation="horizontal"
-            android:layout_width="300dp"
-            android:layout_height="54dp"
-            android:background="@drawable/border"
-            android:layout_marginEnd="8dp" android:layout_marginRight="8dp"
-            app:layout_constraintEnd_toEndOf="parent" app:layout_constraintStart_toStartOf="parent"
-            android:layout_marginLeft="8dp" android:layout_marginStart="8dp"
-            android:id="@+id/usernameLayout"
-            android:layout_marginTop="20dp" app:layout_constraintTop_toBottomOf="@+id/emailLayout">
-        <EditText
-                android:layout_marginLeft="10dp"
-                android:layout_marginRight="10dp"
-                android:layout_width="360dp"
-                android:layout_height="match_parent"
-                android:inputType="textEmailAddress"
-                android:ems="10"
-                android:id="@+id/usernameField" android:layout_weight="1" android:hint="Kullanıcı adı"/>
-    </LinearLayout>
+
     <LinearLayout
             android:orientation="horizontal"
             android:layout_width="300dp"
@@ -67,30 +49,36 @@
             android:layout_width="300dp"
             android:layout_height="54dp"
             android:background="@drawable/border"
-            android:id="@+id/cityLayout" android:layout_marginTop="20dp"
-            app:layout_constraintTop_toBottomOf="@+id/usernameLayout" android:layout_marginEnd="8dp"
+            android:id="@+id/nameLayout" android:layout_marginTop="20dp"
+            app:layout_constraintTop_toBottomOf="@+id/emailLayout" android:layout_marginEnd="8dp"
             app:layout_constraintEnd_toEndOf="parent" android:layout_marginRight="8dp" android:layout_marginStart="8dp"
             app:layout_constraintStart_toStartOf="parent" android:layout_marginLeft="8dp">
-        <Spinner
+        <EditText
                 android:layout_marginLeft="10dp"
                 android:layout_marginRight="10dp"
                 android:layout_width="360dp"
                 android:layout_height="match_parent"
+                android:inputType="textPersonName"
                 android:ems="10"
-                android:id="@+id/cityDropdown"
-                android:layout_weight="1"
-                android:spinnerMode="dialog"
-                android:background="@android:color/transparent"/>
-        <ImageView
-                android:background="@drawable/widget_rightside_rounded"
-                android:layout_width="50dp"
+                android:id="@+id/nameField" android:layout_weight="1" android:hint="Name"/>
+    </LinearLayout>
+    <LinearLayout
+            android:orientation="horizontal"
+            android:layout_width="300dp"
+            android:layout_height="54dp"
+            android:background="@drawable/border"
+            android:id="@+id/surnameLayout" android:layout_marginTop="20dp"
+            app:layout_constraintTop_toBottomOf="@+id/nameLayout" android:layout_marginEnd="8dp"
+            app:layout_constraintEnd_toEndOf="parent" android:layout_marginRight="8dp" android:layout_marginStart="8dp"
+            app:layout_constraintStart_toStartOf="parent" android:layout_marginLeft="8dp">
+        <EditText
+                android:layout_marginLeft="10dp"
+                android:layout_marginRight="10dp"
+                android:layout_width="360dp"
                 android:layout_height="match_parent"
-                android:paddingLeft="10dp"
-                android:paddingRight="10dp"
-                android:layout_alignParentRight="true"
-                android:layout_centerVertical="true"
-                android:layout_gravity="center"
-                android:src="@mipmap/downarrow"/>
+                android:inputType="textPersonName"
+                android:ems="10"
+                android:id="@+id/surnameField" android:layout_weight="1" android:hint="Surname"/>
     </LinearLayout>
     <LinearLayout
             android:orientation="horizontal"
@@ -107,7 +95,7 @@
                 android:layout_height="match_parent"
                 android:inputType="textPassword"
                 android:ems="10"
-                android:id="@+id/repeatPasswordField" android:layout_weight="1" android:hint="Şifreyi tekrarla"/>
+                android:id="@+id/repeatPasswordField" android:layout_weight="1" android:hint="Confirm password"/>
     </LinearLayout>
     <LinearLayout
             android:orientation="horizontal"
@@ -118,7 +106,7 @@
             app:layout_constraintEnd_toEndOf="parent" app:layout_constraintStart_toStartOf="parent"
             android:layout_marginLeft="8dp" android:layout_marginStart="8dp"
             android:id="@+id/passwordLayout"
-            android:layout_marginTop="20dp" app:layout_constraintTop_toBottomOf="@+id/cityLayout">
+            android:layout_marginTop="20dp" app:layout_constraintTop_toBottomOf="@+id/surnameLayout">
         <EditText
                 android:layout_marginLeft="10dp"
                 android:layout_marginRight="10dp"
@@ -126,7 +114,7 @@
                 android:layout_height="match_parent"
                 android:ems="10"
                 android:id="@+id/passwordField" android:layout_weight="1" android:inputType="textPassword"
-                android:hint="Şifre"/>
+                android:hint="Password"/>
     </LinearLayout>
     <LinearLayout
             android:orientation="horizontal"
@@ -139,7 +127,7 @@
             android:id="@+id/loginLayout"
             android:layout_marginTop="20dp" app:layout_constraintTop_toBottomOf="@+id/repeatPasswordLayout">
         <Button
-                android:text="Kaydol"
+                android:text="SIGN UP"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:id="@+id/registerButton"

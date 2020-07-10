@@ -3,8 +3,6 @@
 
     <string-array name="cities_array">
         <item>İzmir</item>
-        <item>İstanbul</item>
-        <item>Ankara</item>
     </string-array>
 
     <string name="search_restaurant">Restorant ara</string>

@@ -33,8 +33,8 @@ class SettingsActivity : AppCompatActivity() {
         logoutButton.setOnClickListener {
             val builder = AlertDialog.Builder(this)
 
-            builder.setTitle("Çıkış")
-            builder.setMessage("Çıkış yapmak istediğinizden emin misiniz?")
+            builder.setTitle("Logout")
+            builder.setMessage("Are you sure you want to logout")
 
             builder.setPositiveButton("YES") { dialog, which ->
                 preferences.edit().clear().apply()

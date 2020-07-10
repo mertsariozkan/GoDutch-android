@@ -1,7 +1,6 @@
 package com.example.godutch.views
 
 import android.app.Activity
-import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -50,14 +49,14 @@ class LoginActivity : Activity() {
         val request : OkHttpRequest = OkHttpRequest(client)
 
         progressBar = findViewById(R.id.login_progressbar)
-        val usernameField: EditText = findViewById(R.id.usernameField)
+        val emailField: EditText = findViewById(R.id.emailField)
         val passwordField: EditText = findViewById(R.id.passwordField)
 
         val loginButton = findViewById<Button>(R.id.loginButton)
         loginButton.setOnClickListener {
             startProgressBar()
-
-            var signInRequest = SignInRequest(usernameField.text.toString())
+            val username = emailField.text.toString().split("@")[0]
+            var signInRequest = SignInRequest(username)
             signInRequest.password = passwordField.text.toString()
 
             if(signInRequest.username != "" && signInRequest.password != "") {
@@ -73,7 +72,8 @@ class LoginActivity : Activity() {
                                 println("Request Successful!!")
                                 result = SignupResponse(
                                     json["id"] as String,
-                                    json["username"] as String,
+                                    json["name"] as String,
+                                    json["surname"] as String,
                                     json["email"] as String,
                                     json["roles"] as JSONArray,
                                     json["accessToken"] as String,
@@ -82,7 +82,7 @@ class LoginActivity : Activity() {
                                 val editor = preferences.edit()
                                 editor.putString("token", result!!.tokenType+" "+ result!!.accessToken)
                                 editor.putString("userId", result!!.id)
-                                editor.putString("username", result!!.username)
+                                editor.putString("username", result!!.name + " " + result!!.surname)
                                 editor.putString("email", result!!.email)
 
                                 if(result!!.roles[0] == "ROLE_WAITER")

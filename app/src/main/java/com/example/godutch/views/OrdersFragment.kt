@@ -75,7 +75,7 @@ class OrdersFragment : Fragment() {
         tableName = args.getString("tableName")
         token = args.getString("token")
         userId = args.getString("userId")
-        username = args.getString("userName")
+        username = args.getString("emailFront")
 
         val getCardsUrl = AppCommons.RootUrl + "card/" + userId
         request.GET(getCardsUrl, token!!, object: Callback {
@@ -102,7 +102,6 @@ class OrdersFragment : Fragment() {
                 println("Can not get cards.")
             }
         })
-
         startTimer()
     }
 
@@ -113,6 +112,8 @@ class OrdersFragment : Fragment() {
         val view = inflater.inflate(R.layout.fragment_orders, container, false)
         progressBar = view.f_order_progressBar
         ordersListView = view.my_orders_listview
+        registerForContextMenu(ordersListView!!)
+
         swipeToRefresh = view.swipeToRefreshOrders
         swipeToRefresh!!.setProgressBackgroundColorSchemeColor(
             ContextCompat.getColor(
@@ -315,7 +316,7 @@ class OrdersFragment : Fragment() {
                                             else if((json["paymentActive"] as Boolean)) {
                                                 payButton!!.isClickable = true
                                                 payLayout!!.background = ContextCompat.getDrawable(activity!!, R.drawable.greenfill)
-                                                (activity as TableActivity).supportActionBar?.setDisplayHomeAsUpEnabled(false)
+                                                (activity as TableActivity).invalidateOptionsMenu()
                                                 unregisterForContextMenu(ordersListView!!)
                                             }
                                         }

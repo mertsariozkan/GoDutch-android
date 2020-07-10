@@ -3,6 +3,7 @@ package com.example.godutch.views
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.graphics.Color
 import android.os.Bundle
 import android.view.*
@@ -22,6 +23,7 @@ import com.example.godutch.utils.OkHttpRequest
 import com.example.godutch.utils.SortingHelper
 import com.example.godutch.utils.TablesListAdapter
 import kotlinx.android.synthetic.main.activity_table_list.*
+import kotlinx.android.synthetic.main.appbar_godutch.*
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.OkHttpClient
@@ -30,6 +32,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
 import java.util.*
+import java.util.prefs.Preferences
 import kotlin.collections.ArrayList
 
 
@@ -47,12 +50,14 @@ class TableListActivity : AppCompatActivity() {
     var url: String? = null
     var adapter: TablesListAdapter? = null
     val adapterLock = Any()
+    lateinit var preferences : SharedPreferences
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_table_list)
         progressBar = findViewById(R.id.tablelist_progressbar)
         progressBar!!.visibility = ProgressBar.VISIBLE
+
         window.setFlags(
             WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
             WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
@@ -61,11 +66,16 @@ class TableListActivity : AppCompatActivity() {
         supportActionBar?.displayOptions = ActionBar.DISPLAY_SHOW_CUSTOM
         supportActionBar?.setCustomView(R.layout.appbar_godutch)
 
+        preferences = this.getSharedPreferences("APP_PREFERENCES", Context.MODE_PRIVATE)
+
+        val userName = preferences.getString("username","")
+
+        actionbar_username.text = userName + ""
+        actionbar_profile.visibility = View.VISIBLE
+
         activity = this
-        val preferences = this.getSharedPreferences("APP_PREFERENCES", Context.MODE_PRIVATE)
+
         token = preferences.getString("token", "")
-        val userId = preferences.getString("userId", "")
-        val username = preferences.getString("username", "")
         restaurantId = preferences.getString("restaurantId", "")
         url = AppCommons.RootUrl + "table/" + restaurantId + "/allactive"
 
@@ -113,17 +123,32 @@ class TableListActivity : AppCompatActivity() {
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
 
-        menuInflater.inflate(R.menu.appbar_settings, menu)
+        menuInflater.inflate(R.menu.appbar_table, menu)
         return super.onCreateOptionsMenu(menu)
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         val id = item.itemId
 
-        if (id == R.id.settingsButton) {
-            stopTimer()
-            val intent = Intent(this, SettingsActivity::class.java)
-            startActivity(intent)
+        if (id == R.id.leaveTableButton) {
+            val builder = android.app.AlertDialog.Builder(this)
+
+            builder.setTitle("Logout")
+            builder.setMessage("Are you sure you want to logout?")
+
+            builder.setPositiveButton("YES") { dialog, which ->
+                preferences.edit().clear().apply()
+                val intent = Intent(this, LoginActivity::class.java)
+                startActivity(intent)
+                finish()
+            }
+
+            builder.setNegativeButton("NO") { dialog, which ->
+                dialog.dismiss()
+            }
+
+            val alert = builder.create()
+            alert.show()
         }
         return super.onOptionsItemSelected(item)
     }

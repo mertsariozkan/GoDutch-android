@@ -4,16 +4,16 @@
     <item
             android:id="@+id/navigation_menu"
             android:icon="@mipmap/menu"
-            android:title="@string/title_menu"/>
+            android:title="Menu"/>
 
     <item
-            android:id="@+id/navigation_table"
+            android:id="@+id/navigation_orders"
             android:icon="@mipmap/table_icon"
-            android:title="@string/title_table"/>
+            android:title="Table"/>
 
     <item
-            android:id="@+id/navigation_myorders"
+            android:id="@+id/navigation_cart"
             android:icon="@mipmap/basket"
-            android:title="@string/title_myorders"/>
+            android:title="My Orders"/>
 
 </menu>

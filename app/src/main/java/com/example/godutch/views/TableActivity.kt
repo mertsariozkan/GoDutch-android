@@ -4,7 +4,9 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.view.Menu
 import android.view.MenuItem
+import android.view.View
 import androidx.appcompat.app.ActionBar
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -35,19 +37,21 @@ class TableActivity : AppCompatActivity(), MenuFragment.OnFragmentInteractionLis
     var tableName: String? = null
     var token: String? = null
 
+    var paymentInitiated : Boolean = false
+
     private val mOnNavigationItemSelectedListener = BottomNavigationView.OnNavigationItemSelectedListener { item ->
         when (item.itemId) {
             R.id.navigation_menu -> {
                 changeFragment(menuFragment)
                 return@OnNavigationItemSelectedListener true
             }
-            R.id.navigation_table -> {
+            R.id.navigation_orders -> {
                 val tableFragment = TableFragment()
                 tableFragment.arguments = args
                 changeFragment(tableFragment)
                 return@OnNavigationItemSelectedListener true
             }
-            R.id.navigation_myorders -> {
+            R.id.navigation_cart -> {
                 val ordersFragment = OrdersFragment()
                 ordersFragment.arguments = args
                 changeFragment(ordersFragment)
@@ -57,14 +61,28 @@ class TableActivity : AppCompatActivity(), MenuFragment.OnFragmentInteractionLis
         false
     }
 
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.appbar_table, menu)
+
+        val item = menu.findItem(R.id.leaveTableButton)
+
+        if (paymentInitiated)
+            item.isVisible = false
+
+        return super.onCreateOptionsMenu(menu)
+    }
+
+    override fun invalidateOptionsMenu() {
+        paymentInitiated = true
+        super.invalidateOptionsMenu()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_table)
 
         supportActionBar?.displayOptions = ActionBar.DISPLAY_SHOW_CUSTOM
         supportActionBar?.setCustomView(R.layout.appbar_godutch)
-        supportActionBar?.setHomeAsUpIndicator(R.mipmap.exit)
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
         restaurantId = intent.getStringExtra("restaurantId")
         var restaurantName = intent.getStringExtra("restaurantName")
@@ -73,9 +91,11 @@ class TableActivity : AppCompatActivity(), MenuFragment.OnFragmentInteractionLis
 
         actionbar_title.text = tableName + ""
         actionbar_username.text = userName + ""
+        actionbar_profile.visibility = View.VISIBLE
 
         val preferences = getSharedPreferences("APP_PREFERENCES", Context.MODE_PRIVATE)
         token = preferences.getString("token", "")
+        var email = preferences.getString("email", "")
         var userId = preferences.getString("userId", "")
 
         args.putString("restaurantId", restaurantId)
@@ -84,6 +104,7 @@ class TableActivity : AppCompatActivity(), MenuFragment.OnFragmentInteractionLis
         args.putString("token", token)
         args.putString("userId", userId)
         args.putString("userName", userName)
+        args.putString("emailFront", email.split("@")[0])
 
         menuFragment.arguments = args
 
